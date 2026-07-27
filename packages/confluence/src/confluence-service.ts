@@ -354,6 +354,7 @@ export const confluenceToolSchemas = {
     content: z.string().optional().describe("New content body in Confluence Data Center storage format (XML-based)"),
     version: z.number().describe("New version number (must be incremented)"),
     versionComment: z.string().optional().describe("Comment for this version"),
+    parentId: z.string().optional().describe("ID of the new parent page (moves the page under this parent; same mechanism as createContent parentId)"),
     output: z.enum(['ack', 'full']).optional().describe("Return a compact acknowledgement or the full API response. Defaults to ack.")
   },
   searchSpaces: {

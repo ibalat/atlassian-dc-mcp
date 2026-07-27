@@ -89,9 +89,9 @@ server.tool(
 
 server.tool(
   "confluence_updateContent",
-  `Update existing content in ${confluenceInstanceType}`,
+  `Update existing content in ${confluenceInstanceType}. Optionally move the page by setting parentId.`,
   confluenceToolSchemas.updateContent,
-  async ({ contentId, title, content, version, versionComment, output }) => {
+  async ({ contentId, title, content, version, versionComment, parentId, output }) => {
     // First get the current content to build upon
     const currentContent = await confluenceService.getContentRaw(contentId);
 
@@ -128,6 +128,11 @@ server.tool(
           representation: 'storage'
         }
       };
+    }
+
+    // Move page under a new parent when parentId is provided
+    if (parentId) {
+      updateObj.ancestors = [{ id: parentId }];
     }
 
     const result = await confluenceService.updateContent(contentId, updateObj);
