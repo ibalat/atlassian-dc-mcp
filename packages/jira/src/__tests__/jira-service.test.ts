@@ -463,6 +463,8 @@ describe('JiraService', () => {
     it('should create a link between two issues', async () => {
       (IssueLinkService.linkIssues as jest.Mock).mockResolvedValue(undefined);
 
+      // POST maps keys 1:1 onto inwardIssue/outwardIssue. Do not swap here;
+      // Jira UI labels are documented on the jira_linkIssues tool schema.
       const result = await jiraService.linkIssues({
         inwardIssueKey: 'PROJ-123',
         outwardIssueKey: 'PROJ-456',

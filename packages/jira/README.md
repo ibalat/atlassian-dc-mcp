@@ -290,9 +290,11 @@ Parameters: none
 
 Create a link between two JIRA issues in the JIRA Data Center edition instance.
 
+Jira UI labels follow GET `issuelinks`, not the REST POST field names: if GET of an issue contains `outwardIssue`, that issue shows the **outward** phrase (`blocks`); if it contains `inwardIssue`, it shows the **inward** phrase (`is blocked by`). So `inwardIssueKey` is the issue that will display the outward phrase.
+
 Parameters:
-- `inwardIssueKey` (string, required): Key of the inward issue — the one the inward link description applies to (e.g., the issue that "is blocked by"). Example: "PROJECT-123"
-- `outwardIssueKey` (string, required): Key of the outward issue — the one the outward link description applies to (e.g., the issue that "blocks"). Example: "PROJECT-456"
+- `inwardIssueKey` (string, required): REST inward issue. In the Jira UI **this** issue shows the **outward** phrase (e.g. "blocks", "split to"). For PROJECT-123 to show "blocks PROJECT-456", pass `inwardIssueKey=PROJECT-123`.
+- `outwardIssueKey` (string, required): REST outward issue. In the Jira UI **this** issue shows the **inward** phrase (e.g. "is blocked by", "split from"). Same example: `outwardIssueKey=PROJECT-456`.
 - `linkType` (string, required): Name of the issue link type to apply (e.g., "Blocks", "Relates"). Use `jira_getIssueLinkTypes` to discover valid names for this JIRA installation.
 - `comment` (string, optional): Comment added to the inward issue when the link is created, in JIRA Wiki Markup
 
