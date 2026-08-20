@@ -92,6 +92,14 @@ server.tool(
   `Update existing content in ${confluenceInstanceType}. Optionally move the page by setting parentId.`,
   confluenceToolSchemas.updateContent,
   async ({ contentId, title, content, version, versionComment, parentId, output }) => {
+    // Fail fast on a self-referential move before any API round trip.
+    if (parentId && parentId === contentId) {
+      return formatToolResponse({
+        success: false,
+        error: `parentId (${parentId}) must be different from contentId; a page cannot be its own parent`
+      });
+    }
+
     // First get the current content to build upon
     const currentContent = await confluenceService.getContentRaw(contentId);
 
