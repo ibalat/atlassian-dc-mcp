@@ -69,6 +69,16 @@ server.tool(
 );
 
 server.tool(
+  "bitbucket_getFileContent",
+  "Get the raw content of a file in a Bitbucket repository, at a branch, tag or commit. Use this to read a source file without cloning the repository. 'at' defaults to the repository's default branch. Pointing 'path' at a directory returns that directory's git tree listing instead of file content.",
+  bitbucketToolSchemas.getFileContent,
+  async ({ projectKey, repositorySlug, path, at }) => {
+    const result = await bitbucketService.getFileContent(projectKey, repositorySlug, path, at);
+    return formatToolResponse(result);
+  }
+);
+
+server.tool(
   "bitbucket_getCommits",
   "Get commits for a Bitbucket repository",
   bitbucketToolSchemas.getCommits,

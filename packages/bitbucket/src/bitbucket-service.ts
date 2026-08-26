@@ -216,6 +216,25 @@ export class BitbucketService {
   }
 
   /**
+   * Get the raw content of a file in a repository
+   * @param projectKey The project key
+   * @param repositorySlug The repository slug
+   * @param path The path to the file in the repository
+   * @param at Optional branch, tag or commit to read the file at. Defaults to the repository default branch
+   * @returns Promise with the raw file content
+   */
+  async getFileContent(projectKey: string, repositorySlug: string, path: string, at?: string) {
+    projectKey = projectKey.toUpperCase();
+    repositorySlug = repositorySlug.toLowerCase();
+    // Leading slashes would produce a double slash in the URL and a 404 from Bitbucket.
+    const filePath = path.replace(/^\/+/, '');
+    return handleApiOperation(
+      () => RepositoryService.streamRaw(filePath, projectKey, repositorySlug, at),
+      'Error fetching file content'
+    );
+  }
+
+  /**
    * Get pull requests for a repository
    * @param projectKey The project key
    * @param repositorySlug The repository slug
@@ -1021,6 +1040,12 @@ export const bitbucketToolSchemas = {
   getRepository: {
     projectKey: z.string().describe("The project key"),
     repositorySlug: z.string().describe("The repository slug")
+  },
+  getFileContent: {
+    projectKey: z.string().describe("The project key"),
+    repositorySlug: z.string().describe("The repository slug"),
+    path: z.string().describe("Path to the file in the repository (e.g. 'src/index.ts')"),
+    at: z.string().optional().describe("A branch, tag or commit to read the file at (e.g. 'refs/heads/main', 'feature/x', or a commit id). Defaults to the repository's default branch")
   },
   getCommits: {
     projectKey: z.string().describe("The project key"),
