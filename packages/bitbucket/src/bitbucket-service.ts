@@ -3,6 +3,7 @@ import { OpenAPI, ProjectService, PullRequestsService, RepositoryService } from 
 import { request as __request } from './bitbucket-client/core/request.js';
 import { handleApiOperation, resolveOpenApiBase } from '@atlassian-dc-mcp/common';
 import { simplifyInboxPullRequests } from './inbox-pr-mapper.js';
+import { CompareDiffResponse, formatCompareDiffAsUnified } from './compare-diff-mapper.js';
 import { BITBUCKET_PRODUCT, getDefaultPageSize, getMissingConfig } from './config.js';
 import { fetchMergeability, mergePullRequest, type MergePullRequestParams } from './pr-merge.js';
 import {
@@ -25,6 +26,8 @@ function resolveToken(token: string | (() => string | undefined), missingTokenMe
 }
 
 type DiffLineType = 'ADDED' | 'REMOVED' | 'CONTEXT';
+
+type BranchDiffOutputMode = 'unified' | 'full';
 
 /**
  * Build a Bitbucket DC inline comment anchor.
@@ -686,6 +689,66 @@ export class BitbucketService {
   }
 
   /**
+   * Get text diff between two branches, with or without an existing pull request.
+   *
+   * Mirrors the Bitbucket "compare" view: the diff contains changes reachable from
+   * `sourceBranch` but not from `targetBranch`.
+   * @param projectKey The project key
+   * @param repositorySlug The repository slug
+   * @param sourceBranch The source branch, tag or commit
+   * @param targetBranch Optional target branch, tag or commit. Defaults to the repository default branch
+   * @param path Optional file path to limit the diff to a single file
+   * @param contextLines Optional number of context lines to include around added/removed lines
+   * @param srcPath Optional previous path to the file, if the file has been copied, moved or renamed
+   * @param whitespace Optional whitespace flag which can be set to 'ignore-all'
+   * @param output Render a unified diff or return the raw RestDiff payload. Defaults to 'unified'
+   * @returns Promise with the diff between the two refs
+   */
+  async getBranchDiff(
+    projectKey: string,
+    repositorySlug: string,
+    sourceBranch: string,
+    targetBranch?: string,
+    path?: string,
+    contextLines?: string,
+    srcPath?: string,
+    whitespace?: string,
+    output: BranchDiffOutputMode = 'unified'
+  ) {
+    projectKey = projectKey.toUpperCase();
+    repositorySlug = repositorySlug.toLowerCase();
+    // The endpoint is `/compare/diff{path}`: an empty path diffs the whole comparison,
+    // a file path must keep its leading slash to stay a separate URL segment.
+    const trimmedPath = path?.replace(/^\/+/, '') ?? '';
+    return handleApiOperation(
+      async () => {
+        const diff = await __request<CompareDiffResponse>(OpenAPI, {
+          method: 'GET',
+          url: '/api/latest/projects/{projectKey}/repos/{repositorySlug}/compare/diff{path}',
+          path: {
+            'path': trimmedPath ? `/${trimmedPath}` : '',
+            'projectKey': projectKey,
+            'repositorySlug': repositorySlug,
+          },
+          query: {
+            'from': sourceBranch,
+            'to': targetBranch,
+            'contextLines': contextLines,
+            'srcPath': srcPath,
+            'whitespace': whitespace,
+          },
+          errors: {
+            401: `The currently authenticated user has insufficient permissions to view the repository.`,
+            404: `The repository, or one of the compared refs, does not exist.`,
+          },
+        });
+        return output === 'full' ? diff : formatCompareDiffAsUnified(diff);
+      },
+      'Error fetching branch diff'
+    );
+  }
+
+  /**
    * Create a pull request
    * @param projectKey The project key
    * @param repositorySlug The repository slug
@@ -1101,6 +1164,17 @@ export const bitbucketToolSchemas = {
     diffType: z.string().optional().describe("The type of diff being requested"),
     untilId: z.string().optional().describe("The until commit hash to stream a diff between two arbitrary hashes"),
     whitespace: z.string().optional().describe("Optional whitespace flag which can be set to 'ignore-all'")
+  },
+  getBranchDiff: {
+    projectKey: z.string().describe("The project key"),
+    repositorySlug: z.string().describe("The repository slug"),
+    sourceBranch: z.string().describe("The source branch, tag or commit to diff (e.g. 'feature/my-branch'). Changes reachable from here but not from targetBranch are returned"),
+    targetBranch: z.string().optional().describe("The target branch, tag or commit to compare against. Defaults to the repository's default branch"),
+    path: z.string().optional().describe("Limit the diff to a single file path. Omit to get the diff for every changed file"),
+    contextLines: z.string().optional().describe("Number of context lines to include around added/removed lines in the diff"),
+    srcPath: z.string().optional().describe("The previous path to the file, if the file has been copied, moved or renamed"),
+    whitespace: z.string().optional().describe("Optional whitespace flag which can be set to 'ignore-all'"),
+    output: z.enum(['unified', 'full']).optional().describe("Render the comparison as a unified diff or return the raw RestDiff payload. Defaults to unified.")
   },
   createPullRequest: {
     projectKey: z.string().describe("The project key"),
