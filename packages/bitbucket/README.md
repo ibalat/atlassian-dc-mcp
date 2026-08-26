@@ -280,6 +280,18 @@ Parameters:
 - `message` (string, optional): Merge commit message. Defaults to Bitbucket's generated message.
 - `output` (string, optional): `ack` (default) or `full`
 
+#### 9. bitbucket_createBranch
+
+Create a branch in a repository, forked from a branch, tag or commit.
+
+Parameters:
+- `projectKey` (string, required): The project key
+- `repositorySlug` (string, required): The repository slug
+- `name` (string, required): Name of the branch to create, without the `refs/heads/` prefix (e.g. `feature/my-branch`)
+- `startPoint` (string, required): The branch, tag or commit the new branch is forked from (e.g. `master`, `refs/heads/master`, or a commit id)
+
+The response contains the new branch's `id` (e.g. `refs/heads/feature/my-branch`), which is what `bitbucket_createPullRequest` expects as `fromRefId`.
+
 ## Response Shaping
 
 - Paginated read tools use `BITBUCKET_DEFAULT_PAGE_SIZE` when `limit` is omitted.

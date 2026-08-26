@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { initializeRuntimeConfig } from '@atlassian-dc-mcp/common';
 import { BitbucketService } from '../bitbucket-service.js';
-import { PullRequestsService } from '../bitbucket-client/index.js';
+import { PullRequestsService, RepositoryService } from '../bitbucket-client/index.js';
 import { request as mockRequest } from '../bitbucket-client/core/request.js';
 
 // Mock the request function
@@ -24,6 +24,9 @@ jest.mock('../bitbucket-client/index.js', () => ({
     getPage: jest.fn(),
     getReviewers: jest.fn(),
     get3: jest.fn()
+  },
+  RepositoryService: {
+    createBranch: jest.fn()
   },
   OpenAPI: {
     BASE: '',
@@ -1202,6 +1205,78 @@ describe('BitbucketService', () => {
         mockRepositorySlug,
         mockPullRequestId,
         'src/file.txt'
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('API Error');
+    });
+  });
+
+  describe('createBranch', () => {
+    const mockBranch = {
+      id: 'refs/heads/feature/my-branch',
+      displayId: 'feature/my-branch',
+      type: 'BRANCH',
+      latestCommit: '10a5844f89abf8fd8aebf61168eb60d177d20b4f',
+      isDefault: false
+    };
+
+    it('should create a branch from the given start point', async () => {
+      (RepositoryService.createBranch as jest.Mock).mockResolvedValue(mockBranch);
+
+      const result = await bitbucketService.createBranch(
+        mockProjectKey,
+        mockRepositorySlug,
+        'feature/my-branch',
+        'master'
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockBranch);
+      expect(RepositoryService.createBranch).toHaveBeenCalledWith(
+        mockProjectKey,
+        mockRepositorySlug,
+        { name: 'feature/my-branch', startPoint: 'master' }
+      );
+    });
+
+    it('should accept a commit id as the start point', async () => {
+      (RepositoryService.createBranch as jest.Mock).mockResolvedValue(mockBranch);
+
+      await bitbucketService.createBranch(
+        mockProjectKey,
+        mockRepositorySlug,
+        'hotfix/x',
+        '10a5844f89abf8fd8aebf61168eb60d177d20b4f'
+      );
+
+      expect(RepositoryService.createBranch).toHaveBeenCalledWith(
+        mockProjectKey,
+        mockRepositorySlug,
+        { name: 'hotfix/x', startPoint: '10a5844f89abf8fd8aebf61168eb60d177d20b4f' }
+      );
+    });
+
+    it('should normalize project key and repository slug casing', async () => {
+      (RepositoryService.createBranch as jest.Mock).mockResolvedValue(mockBranch);
+
+      await bitbucketService.createBranch('test', 'TEST-REPO', 'feature/my-branch', 'master');
+
+      expect(RepositoryService.createBranch).toHaveBeenCalledWith(
+        'TEST',
+        'test-repo',
+        { name: 'feature/my-branch', startPoint: 'master' }
+      );
+    });
+
+    it('should handle API errors gracefully', async () => {
+      (RepositoryService.createBranch as jest.Mock).mockRejectedValue(new Error('API Error'));
+
+      const result = await bitbucketService.createBranch(
+        mockProjectKey,
+        mockRepositorySlug,
+        'feature/my-branch',
+        'master'
       );
 
       expect(result.success).toBe(false);

@@ -69,6 +69,16 @@ server.tool(
 );
 
 server.tool(
+  "bitbucket_createBranch",
+  "Create a branch in a Bitbucket repository, forked from a branch, tag or commit. Use this before bitbucket_createPullRequest when the source branch does not exist yet. The response contains the new branch's 'id' (e.g. 'refs/heads/feature/my-branch'), which is what bitbucket_createPullRequest expects as fromRefId.",
+  bitbucketToolSchemas.createBranch,
+  async ({ projectKey, repositorySlug, name, startPoint }) => {
+    const result = await bitbucketService.createBranch(projectKey, repositorySlug, name, startPoint);
+    return formatToolResponse(result);
+  }
+);
+
+server.tool(
   "bitbucket_getCommits",
   "Get commits for a Bitbucket repository",
   bitbucketToolSchemas.getCommits,
