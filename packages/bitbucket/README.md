@@ -231,7 +231,9 @@ Parameters:
 - `projectKey` (string, required): The project key
 - `repositorySlug` (string, required): The repository slug
 - `path` (string, required): Path to the file in the repository
-- `at` (string, optional): Commit or branch to get the file from (defaults to main/master branch)
+- `at` (string, optional): Branch, tag or commit to read the file at (defaults to the repository's default branch)
+
+Pointing `path` at a directory returns that directory's git tree listing instead of file content.
 
 #### 5. bitbucket_getPullRequests
 

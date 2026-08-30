@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { initializeRuntimeConfig } from '@atlassian-dc-mcp/common';
 import { BitbucketService } from '../bitbucket-service.js';
-import { PullRequestsService } from '../bitbucket-client/index.js';
+import { PullRequestsService, RepositoryService } from '../bitbucket-client/index.js';
 import { request as mockRequest } from '../bitbucket-client/core/request.js';
 
 // Mock the request function
@@ -24,6 +24,9 @@ jest.mock('../bitbucket-client/index.js', () => ({
     getPage: jest.fn(),
     getReviewers: jest.fn(),
     get3: jest.fn()
+  },
+  RepositoryService: {
+    streamRaw: jest.fn()
   },
   OpenAPI: {
     BASE: '',
@@ -1203,6 +1206,78 @@ describe('BitbucketService', () => {
         mockPullRequestId,
         'src/file.txt'
       );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('API Error');
+    });
+  });
+
+  describe('getFileContent', () => {
+    const mockFileContent = 'FROM node:20-alpine\n\nWORKDIR /app\n';
+
+    it('should fetch a file at the repository default branch when at is omitted', async () => {
+      (RepositoryService.streamRaw as jest.Mock).mockResolvedValue(mockFileContent);
+
+      const result = await bitbucketService.getFileContent(mockProjectKey, mockRepositorySlug, 'Dockerfile');
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(mockFileContent);
+      expect(RepositoryService.streamRaw).toHaveBeenCalledWith(
+        'Dockerfile',
+        mockProjectKey,
+        mockRepositorySlug,
+        undefined
+      );
+    });
+
+    it('should pass the ref through and keep nested paths intact', async () => {
+      (RepositoryService.streamRaw as jest.Mock).mockResolvedValue(mockFileContent);
+
+      await bitbucketService.getFileContent(
+        mockProjectKey,
+        mockRepositorySlug,
+        'deploy/base/configmap.yaml',
+        'refs/heads/main'
+      );
+
+      expect(RepositoryService.streamRaw).toHaveBeenCalledWith(
+        'deploy/base/configmap.yaml',
+        mockProjectKey,
+        mockRepositorySlug,
+        'refs/heads/main'
+      );
+    });
+
+    it('should strip a leading slash from the path', async () => {
+      (RepositoryService.streamRaw as jest.Mock).mockResolvedValue(mockFileContent);
+
+      await bitbucketService.getFileContent(mockProjectKey, mockRepositorySlug, '/src/index.ts');
+
+      expect(RepositoryService.streamRaw).toHaveBeenCalledWith(
+        'src/index.ts',
+        mockProjectKey,
+        mockRepositorySlug,
+        undefined
+      );
+    });
+
+    it('should normalize project key and repository slug casing', async () => {
+      (RepositoryService.streamRaw as jest.Mock).mockResolvedValue(mockFileContent);
+
+      await bitbucketService.getFileContent('test', 'TEST-REPO', 'Dockerfile');
+
+      expect(RepositoryService.streamRaw).toHaveBeenCalledWith(
+        'Dockerfile',
+        'TEST',
+        'test-repo',
+        undefined
+      );
+    });
+
+    it('should handle API errors gracefully', async () => {
+      (RepositoryService.streamRaw as jest.Mock).mockRejectedValue(new Error('API Error'));
+
+      const result = await bitbucketService.getFileContent(mockProjectKey, mockRepositorySlug, 'missing.txt');
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('API Error');
