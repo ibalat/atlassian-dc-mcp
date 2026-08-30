@@ -171,10 +171,10 @@ server.tool(
 
 server.tool(
   "bitbucket_createPullRequest",
-  "Create a new pull request in a Bitbucket repository. IMPORTANT: Before creating a PR, use bitbucket_getRequiredReviewers to fetch required reviewers for the source and target branches to ensure the PR is not created without mandatory reviewers.",
+  "Create a new pull request in a Bitbucket repository. Supports fork-based pull requests by passing fromProjectKey/fromRepositorySlug when the source repository differs from the destination (projectKey/repositorySlug). IMPORTANT: Before creating a PR, use bitbucket_getRequiredReviewers to fetch required reviewers for the source and target branches to ensure the PR is not created without mandatory reviewers.",
   bitbucketToolSchemas.createPullRequest,
-  async ({ projectKey, repositorySlug, title, description, fromRefId, toRefId, reviewers, draft, output }) => {
-    const result = await bitbucketService.createPullRequest(projectKey, repositorySlug, title, description, fromRefId, toRefId, reviewers, draft, output);
+  async ({ projectKey, repositorySlug, title, description, fromRefId, toRefId, reviewers, draft, output, fromProjectKey, fromRepositorySlug }) => {
+    const result = await bitbucketService.createPullRequest(projectKey, repositorySlug, title, description, fromRefId, toRefId, reviewers, draft, output, fromProjectKey, fromRepositorySlug);
     return formatToolResponse(result);
   }
 );
