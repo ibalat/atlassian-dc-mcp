@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.33.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.32.0...v0.33.0) (2026-08-30)
+
+
+### Features
+
+* **bitbucket:** add bitbucket_getBranchDiff tool ([f7fcd40](https://github.com/b1ff/atlassian-dc-mcp/commit/f7fcd40e2900a6ac70ca4577726cc1db1e95dd75))
+
+
+
+
+
 # [0.32.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.31.0...v0.32.0) (2026-08-30)
 
 **Note:** Version bump only for package @atlassian-dc-mcp/bitbucket
