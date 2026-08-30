@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.31.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.30.0...v0.31.0) (2026-08-30)
+
+
+### Features
+
+* **bitbucket:** implement bitbucket_getFileContent ([e9f9cec](https://github.com/b1ff/atlassian-dc-mcp/commit/e9f9cecc7d613ce11ead519c1b9b7fffdf55af77)), closes [#37](https://github.com/b1ff/atlassian-dc-mcp/issues/37)
+
+
+
+
+
 # [0.30.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.29.0...v0.30.0) (2026-08-30)
 
 
