@@ -231,7 +231,9 @@ Parameters:
 - `projectKey` (string, required): The project key
 - `repositorySlug` (string, required): The repository slug
 - `path` (string, required): Path to the file in the repository
-- `at` (string, optional): Commit or branch to get the file from (defaults to main/master branch)
+- `at` (string, optional): Branch, tag or commit to read the file at (defaults to the repository's default branch)
+
+Pointing `path` at a directory returns that directory's git tree listing instead of file content.
 
 #### 5. bitbucket_getPullRequests
 
@@ -280,7 +282,26 @@ Parameters:
 - `message` (string, optional): Merge commit message. Defaults to Bitbucket's generated message.
 - `output` (string, optional): `ack` (default) or `full`
 
-#### 9. bitbucket_createBranch
+#### 9. bitbucket_getBranchDiff
+
+Get the diff between two branches, tags or commits — including branches that have **no pull request yet**. Returns the same comparison as the Bitbucket "compare" view: changes reachable from `sourceBranch` but not from `targetBranch`, rendered as a unified diff.
+
+Parameters:
+- `projectKey` (string, required): The project key
+- `repositorySlug` (string, required): The repository slug
+- `sourceBranch` (string, required): The source branch, tag or commit (e.g. `feature/my-branch`)
+- `targetBranch` (string, optional): The target branch, tag or commit. Defaults to the repository's default branch
+- `path` (string, optional): Limit the diff to a single file path. Omit to get the diff for every changed file
+- `contextLines` (string, optional): Number of context lines around added/removed lines
+- `srcPath` (string, optional): The previous path to the file, if it has been copied, moved or renamed
+- `whitespace` (string, optional): Whitespace flag, e.g. `ignore-all`
+- `output` (string, optional): `unified` (default) renders a unified diff; `full` returns the raw `RestDiff` payload
+
+Unlike the pull request diff resource, the compare resource only speaks JSON (`Accept: text/plain` is answered with `406`), so the structured payload is folded into a unified diff — roughly a third of the raw JSON size.
+
+Once a pull request exists, prefer `bitbucket_getPullRequestChanges` + `bitbucket_getPullRequestDiff`.
+
+#### 10. bitbucket_createBranch
 
 Create a branch in a repository, forked from a branch, tag or commit.
 

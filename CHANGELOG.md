@@ -3,6 +3,65 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.33.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.32.0...v0.33.0) (2026-08-30)
+
+
+### Bug Fixes
+
+* use standard /api/2/issue/ endpoint instead of /agile/1.0/issue/ ([cd95e49](https://github.com/b1ff/atlassian-dc-mcp/commit/cd95e4967c0e7e4e18ff5e1d7189edc2c4805d9f)), closes [#79](https://github.com/b1ff/atlassian-dc-mcp/issues/79)
+
+
+### Features
+
+* **bitbucket:** add bitbucket_getBranchDiff tool ([f7fcd40](https://github.com/b1ff/atlassian-dc-mcp/commit/f7fcd40e2900a6ac70ca4577726cc1db1e95dd75))
+
+
+
+
+
+# [0.32.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.31.0...v0.32.0) (2026-08-30)
+
+
+### Bug Fixes
+
+* **confluence:** reject self-referential parentId on updateContent. ([11745b9](https://github.com/b1ff/atlassian-dc-mcp/commit/11745b911fbfbe2a4005771a2bbfb465553b10cd))
+* **jira:** document jira_linkIssues direction against the Jira UI ([79e0b1d](https://github.com/b1ff/atlassian-dc-mcp/commit/79e0b1d9e800d80ec6a5e40c0f0b6347fdade02b))
+
+
+### Features
+
+* **confluence:** allow moving pages via updateContent parentId ([9efae17](https://github.com/b1ff/atlassian-dc-mcp/commit/9efae17e5ab4dd82314e1a921b5ef8b8fc48bdef))
+
+
+
+
+
+# [0.31.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.30.0...v0.31.0) (2026-08-30)
+
+
+### Features
+
+* **bitbucket:** implement bitbucket_getFileContent ([e9f9cec](https://github.com/b1ff/atlassian-dc-mcp/commit/e9f9cecc7d613ce11ead519c1b9b7fffdf55af77)), closes [#37](https://github.com/b1ff/atlassian-dc-mcp/issues/37)
+
+
+
+
+
+# [0.30.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.29.0...v0.30.0) (2026-08-30)
+
+
+### Features
+
+* **bitbucket:** add blocker counts to PR comments summary ([0d3466b](https://github.com/b1ff/atlassian-dc-mcp/commit/0d3466b4bf14dfd06cd17e6db18075a48735c7db))
+* **bitbucket:** add pull request merge tools behind an opt-in gateway ([bed3fda](https://github.com/b1ff/atlassian-dc-mcp/commit/bed3fdae2542d5e20d4fc3caefc042f2d69ae944))
+* **bitbucket:** expose comment severity in compact and ack PR comment outputs ([c557914](https://github.com/b1ff/atlassian-dc-mcp/commit/c5579148c6f4151e15ae0b505733a4b201bc90c2))
+* **bitbucket:** support resolving comment threads independently of task state ([1e5af9f](https://github.com/b1ff/atlassian-dc-mcp/commit/1e5af9febce8f211dc8229296110308c6987018c))
+* **jira:** add tool to update issue comments ([d3925ad](https://github.com/b1ff/atlassian-dc-mcp/commit/d3925adc2af2ae43ec41d87929c39fdf41c7a6bc))
+
+
+
+
+
 # [0.29.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.28.0...v0.29.0) (2026-07-26)
 
 

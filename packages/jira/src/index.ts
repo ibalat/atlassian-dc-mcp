@@ -139,7 +139,7 @@ server.tool(
 
 server.tool(
   "jira_linkIssues",
-  `Create a link between two JIRA issues in the ${jiraInstanceType}. Use jira_getIssueLinkTypes to find valid link type names.`,
+  `Create a link between two JIRA issues in the ${jiraInstanceType}. Direction is easy to invert vs the Jira UI: inwardIssueKey is the issue that DISPLAYS the outward phrase (e.g. 'blocks'); outwardIssueKey displays the inward phrase (e.g. 'is blocked by'). After create, GET the first issue — it must have outwardIssue = the second key. Use jira_getIssueLinkTypes for valid type names.`,
   jiraToolSchemas.linkIssues,
   async (params) => {
     const result = await jiraService.linkIssues(params);

@@ -69,6 +69,16 @@ server.tool(
 );
 
 server.tool(
+  "bitbucket_getFileContent",
+  "Get the raw content of a file in a Bitbucket repository, at a branch, tag or commit. Use this to read a source file without cloning the repository. 'at' defaults to the repository's default branch. Pointing 'path' at a directory returns that directory's git tree listing instead of file content.",
+  bitbucketToolSchemas.getFileContent,
+  async ({ projectKey, repositorySlug, path, at }) => {
+    const result = await bitbucketService.getFileContent(projectKey, repositorySlug, path, at);
+    return formatToolResponse(result);
+  }
+);
+
+server.tool(
   "bitbucket_createBranch",
   "Create a branch in a Bitbucket repository, forked from a branch, tag or commit. Use this before bitbucket_createPullRequest when the source branch does not exist yet. The response contains the new branch's 'id' (e.g. 'refs/heads/feature/my-branch'), which is what bitbucket_createPullRequest expects as fromRefId.",
   bitbucketToolSchemas.createBranch,
@@ -180,11 +190,21 @@ server.tool(
 );
 
 server.tool(
+  "bitbucket_getBranchDiff",
+  "Get the diff between two branches, tags or commits — including branches that have no pull request yet. Returns the same comparison as the Bitbucket 'compare' view: changes reachable from sourceBranch but not from targetBranch, rendered as a unified diff. targetBranch defaults to the repository's default branch. Use this to review work in progress before a PR exists; once a PR exists, prefer bitbucket_getPullRequestChanges + bitbucket_getPullRequestDiff.",
+  bitbucketToolSchemas.getBranchDiff,
+  async ({ projectKey, repositorySlug, sourceBranch, targetBranch, path, contextLines, srcPath, whitespace, output }) => {
+    const result = await bitbucketService.getBranchDiff(projectKey, repositorySlug, sourceBranch, targetBranch, path, contextLines, srcPath, whitespace, output);
+    return formatToolResponse(result);
+  }
+);
+
+server.tool(
   "bitbucket_createPullRequest",
-  "Create a new pull request in a Bitbucket repository. IMPORTANT: Before creating a PR, use bitbucket_getRequiredReviewers to fetch required reviewers for the source and target branches to ensure the PR is not created without mandatory reviewers.",
+  "Create a new pull request in a Bitbucket repository. Supports fork-based pull requests by passing fromProjectKey/fromRepositorySlug when the source repository differs from the destination (projectKey/repositorySlug). IMPORTANT: Before creating a PR, use bitbucket_getRequiredReviewers to fetch required reviewers for the source and target branches to ensure the PR is not created without mandatory reviewers.",
   bitbucketToolSchemas.createPullRequest,
-  async ({ projectKey, repositorySlug, title, description, fromRefId, toRefId, reviewers, draft, output }) => {
-    const result = await bitbucketService.createPullRequest(projectKey, repositorySlug, title, description, fromRefId, toRefId, reviewers, draft, output);
+  async ({ projectKey, repositorySlug, title, description, fromRefId, toRefId, reviewers, draft, output, fromProjectKey, fromRepositorySlug }) => {
+    const result = await bitbucketService.createPullRequest(projectKey, repositorySlug, title, description, fromRefId, toRefId, reviewers, draft, output, fromProjectKey, fromRepositorySlug);
     return formatToolResponse(result);
   }
 );

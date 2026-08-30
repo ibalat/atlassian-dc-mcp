@@ -3,6 +3,46 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.33.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.32.0...v0.33.0) (2026-08-30)
+
+**Note:** Version bump only for package @atlassian-dc-mcp/confluence
+
+
+
+
+
+# [0.32.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.31.0...v0.32.0) (2026-08-30)
+
+
+### Bug Fixes
+
+* **confluence:** reject self-referential parentId on updateContent. ([11745b9](https://github.com/b1ff/atlassian-dc-mcp/commit/11745b911fbfbe2a4005771a2bbfb465553b10cd))
+
+
+### Features
+
+* **confluence:** allow moving pages via updateContent parentId ([9efae17](https://github.com/b1ff/atlassian-dc-mcp/commit/9efae17e5ab4dd82314e1a921b5ef8b8fc48bdef))
+
+
+
+
+
+# [0.31.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.30.0...v0.31.0) (2026-08-30)
+
+**Note:** Version bump only for package @atlassian-dc-mcp/confluence
+
+
+
+
+
+# [0.30.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.29.0...v0.30.0) (2026-08-30)
+
+**Note:** Version bump only for package @atlassian-dc-mcp/confluence
+
+
+
+
+
 # [0.29.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.28.0...v0.29.0) (2026-07-26)
 
 

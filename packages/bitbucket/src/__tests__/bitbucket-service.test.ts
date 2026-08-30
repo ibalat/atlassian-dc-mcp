@@ -26,6 +26,7 @@ jest.mock('../bitbucket-client/index.js', () => ({
     get3: jest.fn()
   },
   RepositoryService: {
+    streamRaw: jest.fn(),
     createBranch: jest.fn()
   },
   OpenAPI: {
@@ -1206,6 +1207,240 @@ describe('BitbucketService', () => {
         mockPullRequestId,
         'src/file.txt'
       );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('API Error');
+    });
+  });
+
+  describe('getBranchDiff', () => {
+    const { request: mockRequest } = require('../bitbucket-client/core/request.js');
+    // Trimmed capture of a real Bitbucket DC 9.x compare/diff response.
+    const mockCompareDiff = {
+      fromHash: '4ab70c4ea742bd2102e929a3b58811a69a46ff23',
+      toHash: 'feature/my-branch',
+      diffs: [
+        {
+          source: { toString: 'Dockerfile' },
+          destination: { toString: 'Dockerfile' },
+          hunks: [
+            {
+              sourceLine: 1,
+              sourceSpan: 2,
+              destinationLine: 1,
+              destinationSpan: 3,
+              segments: [
+                { type: 'CONTEXT', lines: [{ line: 'FROM node:20-alpine' }] },
+                { type: 'ADDED', lines: [{ line: 'COPY shbdn ./shbdn' }] },
+                { type: 'REMOVED', lines: [{ line: 'RUN npm ci' }] }
+              ]
+            }
+          ]
+        }
+      ],
+      truncated: false
+    };
+
+    it('should diff the whole comparison against the default branch when only a source branch is given', async () => {
+      mockRequest.mockResolvedValue(mockCompareDiff);
+
+      const result = await bitbucketService.getBranchDiff(
+        mockProjectKey,
+        mockRepositorySlug,
+        'feature/my-branch'
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(
+        'diff --git a/Dockerfile b/Dockerfile\n' +
+        '--- a/Dockerfile\n' +
+        '+++ b/Dockerfile\n' +
+        '@@ -1,2 +1,3 @@\n' +
+        ' FROM node:20-alpine\n' +
+        '+COPY shbdn ./shbdn\n' +
+        '-RUN npm ci'
+      );
+      expect(mockRequest).toHaveBeenCalledWith(
+        expect.any(Object),
+        {
+          method: 'GET',
+          url: '/api/latest/projects/{projectKey}/repos/{repositorySlug}/compare/diff{path}',
+          path: {
+            'path': '',
+            'projectKey': mockProjectKey,
+            'repositorySlug': mockRepositorySlug,
+          },
+          query: {
+            'from': 'feature/my-branch',
+            'to': undefined,
+            'contextLines': undefined,
+            'srcPath': undefined,
+            'whitespace': undefined,
+          },
+          errors: {
+            401: `The currently authenticated user has insufficient permissions to view the repository.`,
+            404: `The repository, or one of the compared refs, does not exist.`,
+          },
+        }
+      );
+    });
+
+    it('should not request text/plain, which the compare resource rejects with 406', async () => {
+      mockRequest.mockResolvedValue(mockCompareDiff);
+
+      await bitbucketService.getBranchDiff(mockProjectKey, mockRepositorySlug, 'feature/my-branch');
+
+      expect(mockRequest).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.not.objectContaining({ headers: expect.anything() })
+      );
+    });
+
+    it('should pass all optional parameters through and normalize the file path', async () => {
+      mockRequest.mockResolvedValue(mockCompareDiff);
+
+      const result = await bitbucketService.getBranchDiff(
+        mockProjectKey,
+        mockRepositorySlug,
+        'feature/my-branch',
+        'main',
+        '/src/file.txt',
+        '5',
+        'old/file.txt',
+        'ignore-all'
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockRequest).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          path: expect.objectContaining({ 'path': '/src/file.txt' }),
+          query: {
+            'from': 'feature/my-branch',
+            'to': 'main',
+            'contextLines': '5',
+            'srcPath': 'old/file.txt',
+            'whitespace': 'ignore-all',
+          },
+        })
+      );
+    });
+
+    it('should return the raw payload when output is full', async () => {
+      mockRequest.mockResolvedValue(mockCompareDiff);
+
+      const result = await bitbucketService.getBranchDiff(
+        mockProjectKey,
+        mockRepositorySlug,
+        'feature/my-branch',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'full'
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockCompareDiff);
+    });
+
+    it('should normalize project key and repository slug casing', async () => {
+      mockRequest.mockResolvedValue(mockCompareDiff);
+
+      await bitbucketService.getBranchDiff('test', 'TEST-REPO', 'feature/my-branch');
+
+      expect(mockRequest).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          path: expect.objectContaining({
+            'projectKey': 'TEST',
+            'repositorySlug': 'test-repo',
+          }),
+        })
+      );
+    });
+
+    it('should handle API errors gracefully', async () => {
+      mockRequest.mockRejectedValue(new Error('API Error'));
+
+      const result = await bitbucketService.getBranchDiff(
+        mockProjectKey,
+        mockRepositorySlug,
+        'feature/my-branch'
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('API Error');
+    });
+  });
+
+  describe('getFileContent', () => {
+    const mockFileContent = 'FROM node:20-alpine\n\nWORKDIR /app\n';
+
+    it('should fetch a file at the repository default branch when at is omitted', async () => {
+      (RepositoryService.streamRaw as jest.Mock).mockResolvedValue(mockFileContent);
+
+      const result = await bitbucketService.getFileContent(mockProjectKey, mockRepositorySlug, 'Dockerfile');
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(mockFileContent);
+      expect(RepositoryService.streamRaw).toHaveBeenCalledWith(
+        'Dockerfile',
+        mockProjectKey,
+        mockRepositorySlug,
+        undefined
+      );
+    });
+
+    it('should pass the ref through and keep nested paths intact', async () => {
+      (RepositoryService.streamRaw as jest.Mock).mockResolvedValue(mockFileContent);
+
+      await bitbucketService.getFileContent(
+        mockProjectKey,
+        mockRepositorySlug,
+        'deploy/base/configmap.yaml',
+        'refs/heads/main'
+      );
+
+      expect(RepositoryService.streamRaw).toHaveBeenCalledWith(
+        'deploy/base/configmap.yaml',
+        mockProjectKey,
+        mockRepositorySlug,
+        'refs/heads/main'
+      );
+    });
+
+    it('should strip a leading slash from the path', async () => {
+      (RepositoryService.streamRaw as jest.Mock).mockResolvedValue(mockFileContent);
+
+      await bitbucketService.getFileContent(mockProjectKey, mockRepositorySlug, '/src/index.ts');
+
+      expect(RepositoryService.streamRaw).toHaveBeenCalledWith(
+        'src/index.ts',
+        mockProjectKey,
+        mockRepositorySlug,
+        undefined
+      );
+    });
+
+    it('should normalize project key and repository slug casing', async () => {
+      (RepositoryService.streamRaw as jest.Mock).mockResolvedValue(mockFileContent);
+
+      await bitbucketService.getFileContent('test', 'TEST-REPO', 'Dockerfile');
+
+      expect(RepositoryService.streamRaw).toHaveBeenCalledWith(
+        'Dockerfile',
+        'TEST',
+        'test-repo',
+        undefined
+      );
+    });
+
+    it('should handle API errors gracefully', async () => {
+      (RepositoryService.streamRaw as jest.Mock).mockRejectedValue(new Error('API Error'));
+
+      const result = await bitbucketService.getFileContent(mockProjectKey, mockRepositorySlug, 'missing.txt');
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('API Error');

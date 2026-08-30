@@ -74,7 +74,7 @@ export class JiraService {
 
   async getIssue(issueKey: string, expand?: string, fields?: string[]) {
     return handleApiOperation(
-      () => IssueService.getIssue(issueKey, expand, toIssueFieldSelection(fields ?? DEFAULT_ISSUE_FIELDS)),
+      () => IssueService.getIssue1(issueKey, expand, (fields ?? DEFAULT_ISSUE_FIELDS).join(',')),
       'Error getting issue'
     );
   }
@@ -171,7 +171,7 @@ export class JiraService {
 
   private async resolveIssueId(issueKey: string): Promise<string> {
     // The dev-status API is keyed by the numeric issue id, not the issue key.
-    const issue = await IssueService.getIssue(issueKey, undefined, toIssueFieldSelection(['id']));
+    const issue = await IssueService.getIssue1(issueKey, undefined, 'id');
     if (!issue?.id) {
       throw new Error(`Could not resolve numeric id for issue ${issueKey}`);
     }
@@ -283,7 +283,7 @@ export class JiraService {
     if (!params.issueKey) {
       throw new Error('Either attachmentId or issueKey must be provided');
     }
-    const issue = await IssueService.getIssue(params.issueKey, undefined, toIssueFieldSelection(['attachment']));
+    const issue = await IssueService.getIssue1(params.issueKey, undefined, 'attachment');
     const all = (((issue as any)?.fields?.attachment) ?? []) as Array<Record<string, any>>;
     const filtered = params.filename ? all.filter((a) => a?.filename === params.filename) : all;
     if (filtered.length === 0) {
@@ -409,8 +409,8 @@ export const jiraToolSchemas = {
   },
   getIssueLinkTypes: {},
   linkIssues: {
-    inwardIssueKey: z.string().describe("Key of the inward issue (the one the inward link description applies to, e.g. the issue that 'is blocked by'). Example: PROJ-123"),
-    outwardIssueKey: z.string().describe("Key of the outward issue (the one the outward link description applies to, e.g. the issue that 'blocks'). Example: PROJ-456"),
+    inwardIssueKey: z.string().describe("REST inward issue. In Jira UI THIS issue shows the OUTWARD phrase (e.g. 'blocks', 'split to'). For PROJ-123 to show 'blocks PROJ-456', pass inwardIssueKey=PROJ-123."),
+    outwardIssueKey: z.string().describe("REST outward issue. In Jira UI THIS issue shows the INWARD phrase (e.g. 'is blocked by', 'split from'). Same example: outwardIssueKey=PROJ-456."),
     linkType: z.string().describe("Name of the issue link type to apply (e.g. 'Blocks', 'Relates', 'Duplicate'). Use jira_getIssueLinkTypes to discover valid names for this JIRA installation."),
     comment: z.string().optional().describe("Optional comment added to the inward issue when the link is created, in JIRA Wiki Markup.")
   },
