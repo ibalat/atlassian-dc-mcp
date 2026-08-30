@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.32.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.31.0...v0.32.0) (2026-08-30)
+
+
+### Bug Fixes
+
+* **jira:** document jira_linkIssues direction against the Jira UI ([79e0b1d](https://github.com/b1ff/atlassian-dc-mcp/commit/79e0b1d9e800d80ec6a5e40c0f0b6347fdade02b))
+
+
+
+
+
 # [0.31.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.30.0...v0.31.0) (2026-08-30)
 
 **Note:** Version bump only for package @atlassian-dc-mcp/jira
