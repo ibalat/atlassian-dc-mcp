@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.30.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.29.0...v0.30.0) (2026-08-30)
+
+
+### Features
+
+* **jira:** add tool to update issue comments ([d3925ad](https://github.com/b1ff/atlassian-dc-mcp/commit/d3925adc2af2ae43ec41d87929c39fdf41c7a6bc))
+
+
+
+
+
 # [0.29.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.28.0...v0.29.0) (2026-07-26)
 
 **Note:** Version bump only for package @atlassian-dc-mcp/jira

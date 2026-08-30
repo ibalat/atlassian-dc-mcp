@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.30.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.29.0...v0.30.0) (2026-08-30)
+
+
+### Features
+
+* **bitbucket:** add blocker counts to PR comments summary ([0d3466b](https://github.com/b1ff/atlassian-dc-mcp/commit/0d3466b4bf14dfd06cd17e6db18075a48735c7db))
+* **bitbucket:** add pull request merge tools behind an opt-in gateway ([bed3fda](https://github.com/b1ff/atlassian-dc-mcp/commit/bed3fdae2542d5e20d4fc3caefc042f2d69ae944))
+* **bitbucket:** expose comment severity in compact and ack PR comment outputs ([c557914](https://github.com/b1ff/atlassian-dc-mcp/commit/c5579148c6f4151e15ae0b505733a4b201bc90c2))
+* **bitbucket:** support resolving comment threads independently of task state ([1e5af9f](https://github.com/b1ff/atlassian-dc-mcp/commit/1e5af9febce8f211dc8229296110308c6987018c))
+* **jira:** add tool to update issue comments ([d3925ad](https://github.com/b1ff/atlassian-dc-mcp/commit/d3925adc2af2ae43ec41d87929c39fdf41c7a6bc))
+
+
+
+
+
 # [0.29.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.28.0...v0.29.0) (2026-07-26)
 
 
