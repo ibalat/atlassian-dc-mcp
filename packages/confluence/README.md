@@ -228,6 +228,7 @@ Parameters:
 - `content` (string, optional): New content body in Confluence Data Center's storage format (XML-based)
 - `version` (number, required): New version number (must be incremented from current version)
 - `versionComment` (string, optional): Comment for this version
+- `parentId` (string, optional): ID of the new parent page (moves the page under this parent; must be different from `contentId`; uses Confluence `ancestors`, same as `createContent` `parentId`)
 - `output` (`ack` | `full`, optional): Return a compact acknowledgement or the full API response. Defaults to `ack`.
 
 #### 5. confluence_searchSpace

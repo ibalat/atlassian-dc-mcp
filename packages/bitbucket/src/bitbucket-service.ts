@@ -219,6 +219,25 @@ export class BitbucketService {
   }
 
   /**
+   * Get the raw content of a file in a repository
+   * @param projectKey The project key
+   * @param repositorySlug The repository slug
+   * @param path The path to the file in the repository
+   * @param at Optional branch, tag or commit to read the file at. Defaults to the repository default branch
+   * @returns Promise with the raw file content
+   */
+  async getFileContent(projectKey: string, repositorySlug: string, path: string, at?: string) {
+    projectKey = projectKey.toUpperCase();
+    repositorySlug = repositorySlug.toLowerCase();
+    // Leading slashes would produce a double slash in the URL and a 404 from Bitbucket.
+    const filePath = path.replace(/^\/+/, '');
+    return handleApiOperation(
+      () => RepositoryService.streamRaw(filePath, projectKey, repositorySlug, at),
+      'Error fetching file content'
+    );
+  }
+
+  /**
    * Get pull requests for a repository
    * @param projectKey The project key
    * @param repositorySlug The repository slug
@@ -750,8 +769,8 @@ export class BitbucketService {
 
   /**
    * Create a pull request
-   * @param projectKey The project key
-   * @param repositorySlug The repository slug
+   * @param projectKey The project key (also used as the destination repository's project)
+   * @param repositorySlug The repository slug (also used as the destination repository's slug)
    * @param title The pull request title
    * @param description Optional pull request description
    * @param fromRefId The source branch (e.g., 'refs/heads/feature-branch')
@@ -759,6 +778,10 @@ export class BitbucketService {
    * @param reviewers Optional array of reviewer usernames
    * @param draft Optional flag to create the pull request as a draft
    * @param output Return a compact acknowledgement or the full API response. Defaults to 'ack'.
+   * @param fromProjectKey Optional source repository's project key, when it differs from
+   *   projectKey (fork-based pull requests). Defaults to projectKey.
+   * @param fromRepositorySlug Optional source repository's slug, when it differs from
+   *   repositorySlug (fork-based pull requests). Defaults to repositorySlug.
    * @returns Promise with created pull request data
    */
   async createPullRequest(
@@ -770,7 +793,9 @@ export class BitbucketService {
     toRefId: string,
     reviewers?: string[],
     draft?: boolean,
-    output: BitbucketMutationOutputMode = 'ack'
+    output: BitbucketMutationOutputMode = 'ack',
+    fromProjectKey?: string,
+    fromRepositorySlug?: string
   ) {
     projectKey = projectKey.toUpperCase();
     repositorySlug = repositorySlug.toLowerCase();
@@ -780,9 +805,9 @@ export class BitbucketService {
       fromRef: {
         id: fromRefId,
         repository: {
-          slug: repositorySlug,
+          slug: (fromRepositorySlug ?? repositorySlug).toLowerCase(),
           project: {
-            key: projectKey
+            key: (fromProjectKey ?? projectKey).toUpperCase()
           }
         }
       },
@@ -1085,6 +1110,12 @@ export const bitbucketToolSchemas = {
     projectKey: z.string().describe("The project key"),
     repositorySlug: z.string().describe("The repository slug")
   },
+  getFileContent: {
+    projectKey: z.string().describe("The project key"),
+    repositorySlug: z.string().describe("The repository slug"),
+    path: z.string().describe("Path to the file in the repository (e.g. 'src/index.ts')"),
+    at: z.string().optional().describe("A branch, tag or commit to read the file at (e.g. 'refs/heads/main', 'feature/x', or a commit id). Defaults to the repository's default branch")
+  },
   getCommits: {
     projectKey: z.string().describe("The project key"),
     repositorySlug: z.string().describe("The repository slug"),
@@ -1177,15 +1208,17 @@ export const bitbucketToolSchemas = {
     output: z.enum(['unified', 'full']).optional().describe("Render the comparison as a unified diff or return the raw RestDiff payload. Defaults to unified.")
   },
   createPullRequest: {
-    projectKey: z.string().describe("The project key"),
-    repositorySlug: z.string().describe("The repository slug"),
+    projectKey: z.string().describe("The destination repository's project key"),
+    repositorySlug: z.string().describe("The destination repository's slug"),
     title: z.string().describe("The pull request title"),
     description: z.string().optional().describe("The pull request description"),
     fromRefId: z.string().describe("The source branch reference ID (e.g., 'refs/heads/feature-branch')"),
     toRefId: z.string().describe("The destination branch reference ID (e.g., 'refs/heads/main')"),
     draft: z.boolean().optional().describe("If true, the pull request is created as a draft (work-in-progress) and cannot be merged until marked ready."),
     reviewers: z.array(z.string()).optional().describe("Optional array of reviewer usernames (use the 'name' field from Bitbucket user objects, not 'slug')"),
-    output: z.enum(['ack', 'full']).optional().describe("Return a compact acknowledgement or the full API response. Defaults to ack.")
+    output: z.enum(['ack', 'full']).optional().describe("Return a compact acknowledgement or the full API response. Defaults to ack."),
+    fromProjectKey: z.string().optional().describe("The source repository's project key, when creating a fork-based pull request where the source repository differs from the destination repository (projectKey). Defaults to projectKey."),
+    fromRepositorySlug: z.string().optional().describe("The source repository's slug, when creating a fork-based pull request where the source repository differs from the destination repository (repositorySlug). Defaults to repositorySlug.")
   },
   updatePullRequest: {
     projectKey: z.string().describe("The project key"),
