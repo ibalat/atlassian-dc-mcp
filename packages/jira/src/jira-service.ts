@@ -409,8 +409,8 @@ export const jiraToolSchemas = {
   },
   getIssueLinkTypes: {},
   linkIssues: {
-    inwardIssueKey: z.string().describe("Key of the inward issue (the one the inward link description applies to, e.g. the issue that 'is blocked by'). Example: PROJ-123"),
-    outwardIssueKey: z.string().describe("Key of the outward issue (the one the outward link description applies to, e.g. the issue that 'blocks'). Example: PROJ-456"),
+    inwardIssueKey: z.string().describe("REST inward issue. In Jira UI THIS issue shows the OUTWARD phrase (e.g. 'blocks', 'split to'). For PROJ-123 to show 'blocks PROJ-456', pass inwardIssueKey=PROJ-123."),
+    outwardIssueKey: z.string().describe("REST outward issue. In Jira UI THIS issue shows the INWARD phrase (e.g. 'is blocked by', 'split from'). Same example: outwardIssueKey=PROJ-456."),
     linkType: z.string().describe("Name of the issue link type to apply (e.g. 'Blocks', 'Relates', 'Duplicate'). Use jira_getIssueLinkTypes to discover valid names for this JIRA installation."),
     comment: z.string().optional().describe("Optional comment added to the inward issue when the link is created, in JIRA Wiki Markup.")
   },
