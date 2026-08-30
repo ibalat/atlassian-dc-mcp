@@ -180,6 +180,16 @@ server.tool(
 );
 
 server.tool(
+  "bitbucket_getBranchDiff",
+  "Get the diff between two branches, tags or commits — including branches that have no pull request yet. Returns the same comparison as the Bitbucket 'compare' view: changes reachable from sourceBranch but not from targetBranch, rendered as a unified diff. targetBranch defaults to the repository's default branch. Use this to review work in progress before a PR exists; once a PR exists, prefer bitbucket_getPullRequestChanges + bitbucket_getPullRequestDiff.",
+  bitbucketToolSchemas.getBranchDiff,
+  async ({ projectKey, repositorySlug, sourceBranch, targetBranch, path, contextLines, srcPath, whitespace, output }) => {
+    const result = await bitbucketService.getBranchDiff(projectKey, repositorySlug, sourceBranch, targetBranch, path, contextLines, srcPath, whitespace, output);
+    return formatToolResponse(result);
+  }
+);
+
+server.tool(
   "bitbucket_createPullRequest",
   "Create a new pull request in a Bitbucket repository. Supports fork-based pull requests by passing fromProjectKey/fromRepositorySlug when the source repository differs from the destination (projectKey/repositorySlug). IMPORTANT: Before creating a PR, use bitbucket_getRequiredReviewers to fetch required reviewers for the source and target branches to ensure the PR is not created without mandatory reviewers.",
   bitbucketToolSchemas.createPullRequest,
