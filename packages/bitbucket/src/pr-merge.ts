@@ -5,7 +5,7 @@ import {
   shapeMergeability,
   shapePullRequestAck,
 } from './bitbucket-response-mapper.js';
-import { assertRepoMergeAllowed, assertTargetRefMergeAllowed, type MergeGateway } from './merge-gateway.js';
+import { assertRepoOperationAllowed, assertTargetRefMergeAllowed, type RepoGateway } from './repo-gateway.js';
 
 export interface MergePullRequestParams {
   projectKey: string;
@@ -13,7 +13,7 @@ export interface MergePullRequestParams {
   pullRequestId: string;
   /** Current PR version, required for optimistic locking. */
   version: number;
-  gateway: MergeGateway;
+  gateway: RepoGateway;
   strategyId?: string;
   message?: string;
   output?: BitbucketMutationOutputMode;
@@ -75,7 +75,7 @@ export async function mergePullRequest(params: MergePullRequestParams) {
   const { projectKey, repositorySlug, pullRequestId, version, gateway } = params;
 
   const result = await handleApiOperation(async () => {
-    assertRepoMergeAllowed(gateway, projectKey, repositorySlug);
+    assertRepoOperationAllowed(gateway, projectKey, repositorySlug);
     await assertTargetRefAllowed(params);
     await assertMergeable(projectKey, repositorySlug, pullRequestId);
 

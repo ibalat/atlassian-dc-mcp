@@ -1,7 +1,7 @@
 import { connectServer, createMcpServer, formatToolResponse, initializeRuntimeConfig } from '@atlassian-dc-mcp/common';
 import { BitbucketService, bitbucketToolSchemas } from './bitbucket-service.js';
 import { getBitbucketRuntimeConfig, getDefaultPageSize } from './config.js';
-import { resolveMergeGateway } from './merge-gateway.js';
+import { resolveDeclineGateway, resolveMergeGateway } from './repo-gateway.js';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -246,6 +246,47 @@ if (mergeGateway.enabled) {
     }
   );
 }
+
+const declineGateway = resolveDeclineGateway();
+
+// Declining is reviewer-visible the moment it lands and notifies everyone on the pull request, so
+// it is registered only for the repositories the operator named. Reopening is the undo path and is
+// always available.
+if (declineGateway.enabled) {
+  server.tool(
+    "bitbucket_declinePullRequest",
+    `Decline (close without merging) a pull request. IMPORTANT: you MUST first call bitbucket_getPullRequest to get the current 'version' — it is required for optimistic locking and a stale version is rejected. Pass the reason as 'comment' so it is posted with the decline in a single request. Reviewers are notified; undo with bitbucket_reopenPullRequest. Allowed on this server: ${declineGateway.repos.join(', ')}.`,
+    bitbucketToolSchemas.declinePullRequest,
+    async ({ projectKey, repositorySlug, pullRequestId, version, comment, output }) => {
+      const result = await bitbucketService.declinePullRequest({
+        projectKey,
+        repositorySlug,
+        pullRequestId,
+        version,
+        comment,
+        output,
+        gateway: declineGateway,
+      });
+      return formatToolResponse(result);
+    }
+  );
+}
+
+server.tool(
+  "bitbucket_reopenPullRequest",
+  "Reopen a declined pull request, restoring it to OPEN. IMPORTANT: you MUST first call bitbucket_getPullRequest to get the current 'version' — it is required for optimistic locking and a stale version is rejected. The pull request must be in the DECLINED state; anything else is refused.",
+  bitbucketToolSchemas.reopenPullRequest,
+  async ({ projectKey, repositorySlug, pullRequestId, version, output }) => {
+    const result = await bitbucketService.reopenPullRequest({
+      projectKey,
+      repositorySlug,
+      pullRequestId,
+      version,
+      output,
+    });
+    return formatToolResponse(result);
+  }
+);
 
 server.tool(
   "bitbucket_getRequiredReviewers",

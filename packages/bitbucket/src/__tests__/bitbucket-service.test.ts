@@ -4,6 +4,7 @@ import path from 'node:path';
 import { initializeRuntimeConfig } from '@atlassian-dc-mcp/common';
 import { BitbucketService } from '../bitbucket-service.js';
 import { PullRequestsService, RepositoryService } from '../bitbucket-client/index.js';
+import { DECLINE_POLICY, type RepoGateway } from '../repo-gateway.js';
 import { request as mockRequest } from '../bitbucket-client/core/request.js';
 
 // Mock the request function
@@ -23,7 +24,9 @@ jest.mock('../bitbucket-client/index.js', () => ({
     updateStatus: jest.fn(),
     getPage: jest.fn(),
     getReviewers: jest.fn(),
-    get3: jest.fn()
+    get3: jest.fn(),
+    decline: jest.fn(),
+    reopen: jest.fn()
   },
   RepositoryService: {
     streamRaw: jest.fn()
@@ -2897,6 +2900,39 @@ describe('BitbucketService', () => {
         'TEST', 'test-repo', undefined, undefined,
         'refs/heads/feature', 'refs/heads/main'
       );
+    });
+
+    it('should uppercase projectKey and lowercase repositorySlug for declinePullRequest', async () => {
+      const gateway: RepoGateway = {
+        enabled: true,
+        repos: ['TEST/test-repo'],
+        targetRefs: [],
+        policy: DECLINE_POLICY,
+      };
+      (PullRequestsService.decline as jest.Mock).mockResolvedValue({ id: 1, state: 'DECLINED' });
+
+      await bitbucketService.declinePullRequest({
+        projectKey: 'test',
+        repositorySlug: 'Test-Repo',
+        pullRequestId: '1',
+        version: 2,
+        gateway,
+      });
+
+      expect(PullRequestsService.decline).toHaveBeenCalledWith('TEST', '1', 'test-repo', '2', { version: 2 });
+    });
+
+    it('should uppercase projectKey and lowercase repositorySlug for reopenPullRequest', async () => {
+      (PullRequestsService.reopen as jest.Mock).mockResolvedValue({ id: 1, state: 'OPEN' });
+
+      await bitbucketService.reopenPullRequest({
+        projectKey: 'test',
+        repositorySlug: 'Test-Repo',
+        pullRequestId: '1',
+        version: 2,
+      });
+
+      expect(PullRequestsService.reopen).toHaveBeenCalledWith('TEST', '1', 'test-repo', '2', { version: 2 });
     });
   });
 

@@ -1,6 +1,6 @@
 import { PullRequestsService } from '../bitbucket-client/index.js';
 import { fetchMergeability, mergePullRequest } from '../pr-merge.js';
-import type { MergeGateway } from '../merge-gateway.js';
+import { MERGE_POLICY, type RepoGateway } from '../repo-gateway.js';
 
 jest.mock('../bitbucket-client/index.js', () => ({
   PullRequestsService: {
@@ -15,7 +15,7 @@ const canMerge = PullRequestsService.canMerge as jest.Mock;
 const merge = PullRequestsService.merge as jest.Mock;
 const getPullRequest = PullRequestsService.get3 as jest.Mock;
 
-const OPEN_GATEWAY: MergeGateway = { enabled: true, repos: ['PROJ/demo'], targetRefs: [] };
+const OPEN_GATEWAY: RepoGateway = { enabled: true, repos: ['PROJ/demo'], targetRefs: [], policy: MERGE_POLICY };
 const CLEAN = { canMerge: true, conflicted: false, outcome: 'CLEAN', vetoes: [] };
 const MERGED_PR = {
   id: 42,
@@ -111,7 +111,7 @@ describe('mergePullRequest', () => {
   it('refuses without any request when merging is disabled', async () => {
     const result = await mergePullRequest({
       ...baseParams,
-      gateway: { enabled: false, repos: [], targetRefs: [] },
+      gateway: { enabled: false, repos: [], targetRefs: [], policy: MERGE_POLICY },
     });
 
     expect(result.success).toBe(false);
@@ -137,7 +137,7 @@ describe('mergePullRequest', () => {
 
     const result = await mergePullRequest({
       ...baseParams,
-      gateway: { enabled: true, repos: ['PROJ/demo'], targetRefs: ['refs/heads/develop'] },
+      gateway: { enabled: true, repos: ['PROJ/demo'], targetRefs: ['refs/heads/develop'], policy: MERGE_POLICY },
     });
 
     expect(result.success).toBe(false);
@@ -153,7 +153,7 @@ describe('mergePullRequest', () => {
 
     const result = await mergePullRequest({
       ...baseParams,
-      gateway: { enabled: true, repos: ['PROJ/demo'], targetRefs: ['refs/heads/release/*'] },
+      gateway: { enabled: true, repos: ['PROJ/demo'], targetRefs: ['refs/heads/release/*'], policy: MERGE_POLICY },
     });
 
     expect(result.success).toBe(true);
