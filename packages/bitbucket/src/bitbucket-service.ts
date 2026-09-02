@@ -238,6 +238,23 @@ export class BitbucketService {
   }
 
   /**
+   * Create a branch in a repository
+   * @param projectKey The project key
+   * @param repositorySlug The repository slug
+   * @param name The name of the branch to create
+   * @param startPoint The branch, tag or commit the new branch is forked from
+   * @returns Promise with the created branch
+   */
+  async createBranch(projectKey: string, repositorySlug: string, name: string, startPoint: string) {
+    projectKey = projectKey.toUpperCase();
+    repositorySlug = repositorySlug.toLowerCase();
+    return handleApiOperation(
+      () => RepositoryService.createBranch(projectKey, repositorySlug, { name, startPoint }),
+      'Error creating branch'
+    );
+  }
+
+  /**
    * Get pull requests for a repository
    * @param projectKey The project key
    * @param repositorySlug The repository slug
@@ -1115,6 +1132,12 @@ export const bitbucketToolSchemas = {
     repositorySlug: z.string().describe("The repository slug"),
     path: z.string().describe("Path to the file in the repository (e.g. 'src/index.ts')"),
     at: z.string().optional().describe("A branch, tag or commit to read the file at (e.g. 'refs/heads/main', 'feature/x', or a commit id). Defaults to the repository's default branch")
+  },
+  createBranch: {
+    projectKey: z.string().describe("The project key"),
+    repositorySlug: z.string().describe("The repository slug"),
+    name: z.string().describe("The name of the branch to create, without the 'refs/heads/' prefix (e.g. 'feature/my-branch')"),
+    startPoint: z.string().describe("The branch, tag or commit the new branch is forked from (e.g. 'master', 'refs/heads/master', or a commit id)")
   },
   getCommits: {
     projectKey: z.string().describe("The project key"),
