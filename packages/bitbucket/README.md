@@ -165,6 +165,23 @@ Alternatively, you can use `BITBUCKET_API_BASE_PATH` instead of `BITBUCKET_HOST`
    - The mergeability check runs before the merge: a conflicted or veto-blocked pull request (missing approvals, unresolved tasks, failed builds) is refused without issuing the write, and the veto reasons are returned.
    - Auto-merge (queuing a merge until checks pass) is not exposed.
 
+   ### Declining pull requests (opt-in)
+
+   Declining closes a pull request without merging and notifies every reviewer, so `bitbucket_declinePullRequest` is **not registered** by default either. It has its own flag: allowing declines never implies allowing merges, and vice versa.
+
+   ```
+   # Enable declining (default: false)
+   BITBUCKET_DECLINE_ENABLED=true
+
+   # Required: repositories that may be declined in, as "PROJECT/repository-slug".
+   # A "PROJECT/*" entry allows every repository in that project. Comma-separated.
+   BITBUCKET_DECLINE_ALLOWED_REPOS=PROJ/demo,SANDBOX/*
+   ```
+
+   The same guardrails apply as for merging: the tool activates only when the flag is set **and** at least one valid repository resolves, the allowlist is checked before any API call, and `version` is required for optimistic locking. There is no target-ref restriction — which branch a pull request would have landed on says nothing about whether abandoning it is safe.
+
+   `bitbucket_reopenPullRequest` is **always registered** and needs no configuration: it restores the state a decline removed, so it is the undo path rather than a destructive one.
+
    To create a personal access token:
   - In Bitbucket, select your profile picture at the bottom left
   - Select **Manage Account** > **HTTP access tokens**
@@ -282,7 +299,32 @@ Parameters:
 - `message` (string, optional): Merge commit message. Defaults to Bitbucket's generated message.
 - `output` (string, optional): `ack` (default) or `full`
 
-#### 9. bitbucket_getBranchDiff
+#### 9. bitbucket_declinePullRequest
+
+Decline (close without merging) a pull request. Only registered when declining is enabled for the server — see [Declining pull requests (opt-in)](#declining-pull-requests-opt-in).
+
+Parameters:
+- `projectKey` (string, required): The project key
+- `repositorySlug` (string, required): The repository slug
+- `pullRequestId` (string, required): The pull request ID
+- `version` (number, required): The current pull request version, from `bitbucket_getPullRequest`. A stale version is rejected with a `409`.
+- `comment` (string, optional): Reason for declining, posted as a pull request comment by the same request. Prefer this over posting a separate comment first — sending both together means a rejected decline leaves no orphaned explanation on a pull request that stayed open.
+- `output` (string, optional): `ack` (default) or `full`
+
+The acknowledgement carries the new `version`, which is exactly what `bitbucket_reopenPullRequest` needs if the decline has to be undone.
+
+#### 10. bitbucket_reopenPullRequest
+
+Reopen a declined pull request, restoring it to `OPEN`. Always available — no configuration required.
+
+Parameters:
+- `projectKey` (string, required): The project key
+- `repositorySlug` (string, required): The repository slug
+- `pullRequestId` (string, required): The pull request ID
+- `version` (number, required): The current pull request version, from `bitbucket_getPullRequest`. A stale version — or a pull request that is not `DECLINED` — is rejected with a `409`.
+- `output` (string, optional): `ack` (default) or `full`
+
+#### 11. bitbucket_getBranchDiff
 
 Get the diff between two branches, tags or commits — including branches that have **no pull request yet**. Returns the same comparison as the Bitbucket "compare" view: changes reachable from `sourceBranch` but not from `targetBranch`, rendered as a unified diff.
 

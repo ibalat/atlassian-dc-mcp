@@ -7,6 +7,12 @@ import { CompareDiffResponse, formatCompareDiffAsUnified } from './compare-diff-
 import { BITBUCKET_PRODUCT, getDefaultPageSize, getMissingConfig } from './config.js';
 import { fetchMergeability, mergePullRequest, type MergePullRequestParams } from './pr-merge.js';
 import {
+  declinePullRequest,
+  reopenPullRequest,
+  type DeclinePullRequestParams,
+  type ReopenPullRequestParams,
+} from './pr-state.js';
+import {
   BitbucketMutationOutputMode,
   BitbucketOutputMode,
   shapePullRequestAck,
@@ -593,6 +599,35 @@ export class BitbucketService {
    */
   async mergePullRequest(params: MergePullRequestParams) {
     return mergePullRequest({
+      ...params,
+      projectKey: params.projectKey.toUpperCase(),
+      repositorySlug: params.repositorySlug.toLowerCase(),
+    });
+  }
+
+  /**
+   * Decline a pull request. Only permitted for repositories the operator allowed through the
+   * decline gateway; see repo-gateway.ts.
+   * @param params.version The current pull request version, required for optimistic locking
+   * @param params.comment Optional reason, posted as a pull request comment by the same request
+   * @param params.gateway The resolved operator decline policy
+   * @returns Promise with the declined pull request
+   */
+  async declinePullRequest(params: DeclinePullRequestParams) {
+    return declinePullRequest({
+      ...params,
+      projectKey: params.projectKey.toUpperCase(),
+      repositorySlug: params.repositorySlug.toLowerCase(),
+    });
+  }
+
+  /**
+   * Reopen a declined pull request. Not gated: it restores the state a decline removed.
+   * @param params.version The current pull request version, required for optimistic locking
+   * @returns Promise with the reopened pull request
+   */
+  async reopenPullRequest(params: ReopenPullRequestParams) {
+    return reopenPullRequest({
       ...params,
       projectKey: params.projectKey.toUpperCase(),
       repositorySlug: params.repositorySlug.toLowerCase(),
@@ -1266,6 +1301,21 @@ export const bitbucketToolSchemas = {
     version: z.number().describe("The current version of the pull request (required for optimistic locking). Fetch it with bitbucket_getPullRequest immediately before merging — the server rejects a stale version, which is what stops a merge of code you have not seen."),
     strategyId: z.string().optional().describe("Merge strategy id, e.g. 'no-ff', 'ff', 'ff-only', 'rebase-no-ff', 'rebase-ff-only', 'squash', 'squash-ff-only'. Omit to use the strategy configured for the repository."),
     message: z.string().optional().describe("Commit message for the merge commit. Omit to let Bitbucket generate it."),
+    output: z.enum(['ack', 'full']).optional().describe("Return a compact acknowledgement or the full API response. Defaults to ack.")
+  },
+  declinePullRequest: {
+    projectKey: z.string().describe("The project key"),
+    repositorySlug: z.string().describe("The repository slug"),
+    pullRequestId: z.string().describe("The pull request ID"),
+    version: z.number().describe("The current version of the pull request (required for optimistic locking). Fetch it with bitbucket_getPullRequest immediately before declining; a stale version is rejected with a 409, in which case refetch the version and retry once."),
+    comment: z.string().optional().describe("Reason for declining, posted as a pull request comment by the same request. Prefer this over posting a separate comment first: sending both together means a rejected decline leaves no orphaned 'why this was abandoned' comment on a pull request that stayed open."),
+    output: z.enum(['ack', 'full']).optional().describe("Return a compact acknowledgement or the full API response. Defaults to ack.")
+  },
+  reopenPullRequest: {
+    projectKey: z.string().describe("The project key"),
+    repositorySlug: z.string().describe("The repository slug"),
+    pullRequestId: z.string().describe("The pull request ID"),
+    version: z.number().describe("The current version of the pull request (required for optimistic locking). Fetch it with bitbucket_getPullRequest immediately before reopening; a stale version is rejected with a 409, in which case refetch the version and retry once."),
     output: z.enum(['ack', 'full']).optional().describe("Return a compact acknowledgement or the full API response. Defaults to ack.")
   },
   getRequiredReviewers: {
