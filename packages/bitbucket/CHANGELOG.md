@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.34.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.33.0...v0.34.0) (2026-09-02)
+
+
+### Features
+
+* **bitbucket:** add bitbucket_createBranch tool ([e867ae1](https://github.com/b1ff/atlassian-dc-mcp/commit/e867ae125d307591fe842d588f1c8489071090bd))
+* **bitbucket:** add pull request decline and reopen tools ([d6eb34c](https://github.com/b1ff/atlassian-dc-mcp/commit/d6eb34c3300323cc8c7ba51c89637edeeeaccbce))
+
+
+
+
+
 # [0.33.0](https://github.com/b1ff/atlassian-dc-mcp/compare/v0.32.0...v0.33.0) (2026-08-30)
 
 
