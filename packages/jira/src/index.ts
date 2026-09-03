@@ -1,4 +1,4 @@
-import { connectServer, createMcpServer, formatToolResponse, initializeRuntimeConfig, resolveAttachmentGateway } from '@atlassian-dc-mcp/common';
+import { connectServer, createMcpServer, formatAttachmentToolResponse, formatToolResponse, initializeRuntimeConfig, resolveAttachmentGateway } from '@atlassian-dc-mcp/common';
 import { JiraService, jiraToolSchemas } from './jira-service.js';
 import { getDefaultPageSize, getJiraRuntimeConfig, JIRA_PRODUCT } from './config.js';
 import { createRequire } from 'node:module';
@@ -177,7 +177,7 @@ if (attachmentGateway.upload.enabled) {
 const downloadSaveEnabled = attachmentGateway.download.enabled;
 server.tool(
   "jira_downloadAttachment",
-  `Download attachment(s) from a JIRA issue in the ${jiraInstanceType}, by issue key (optionally filtered by filename) or by a single attachment id. Returns the file content inline (base64 or text). Useful for inspecting a file or moving it elsewhere (e.g. re-uploading to a Confluence page).${downloadSaveEnabled ? ' Can also save into the server-configured download directory; existing files are never overwritten.' : ' Saving to local disk is disabled on this server.'}`,
+  `Download attachment(s) from a JIRA issue in the ${jiraInstanceType}, by issue key (optionally filtered by filename) or by a single attachment id. Returns the file content inline (base64 or text); images are additionally returned as a viewable image, so use this to look at a screenshot or mockup. Useful for inspecting a file or moving it elsewhere (e.g. re-uploading to a Confluence page).${downloadSaveEnabled ? ' Can also save into the server-configured download directory; existing files are never overwritten.' : ' Saving to local disk is disabled on this server.'}`,
   { ...jiraToolSchemas.downloadAttachment, ...(downloadSaveEnabled ? jiraToolSchemas.downloadAttachmentSaveFields : {}) },
   async ({ issueKey, attachmentId, filename, returnContent, maxInlineBytes, save, saveName }: {
     issueKey?: string;
@@ -198,7 +198,7 @@ server.tool(
       maxInlineBytes,
       downloadSide: attachmentGateway.download,
     });
-    return formatToolResponse(result);
+    return formatAttachmentToolResponse(result);
   }
 );
 

@@ -4,6 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 export * from './api-error-handler.js'
 export * from './attachment-download.js'
 export * from './attachment-gateway.js'
+export * from './attachment-tool-response.js'
 export * from './config/index.js';
 export { runSetup, runSetupCli } from './setup-cli.js';
 export { describeValidationError } from './setup/describe-error.js';
