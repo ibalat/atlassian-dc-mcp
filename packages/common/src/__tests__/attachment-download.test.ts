@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { downloadAttachment, MAX_INLINE_BYTES_LIMIT } from '../attachment-download.js';
+import { downloadAttachment } from '../attachment-download.js';
 
 function mockFetchOnce(
   body: Buffer,
@@ -121,18 +121,19 @@ describe('downloadAttachment', () => {
     expect(result.encoding).toBe('base64');
   });
 
-  it('clamps maxInlineBytes to the hard ceiling', async () => {
-    mockFetchOnce(Buffer.alloc(MAX_INLINE_BYTES_LIMIT + 1));
+  it('honours a maxInlineBytes above the image render limit, for text too', async () => {
+    const bigLog = Buffer.alloc(5_000_000, 0x41);
+    mockFetchOnce(bigLog, { contentType: 'text/plain' });
 
     const result = await downloadAttachment({
       url: 'https://host/download/x',
       token: 'tok',
-      filename: 'huge.png',
-      options: { returnContent: 'image', maxInlineBytes: 25_000_000 },
+      filename: 'big.log',
+      options: { returnContent: 'text', maxInlineBytes: 5_000_000 },
     });
 
-    expect(result.content).toBeUndefined();
-    expect(result.contentOmittedReason).toContain(`inline cap of ${MAX_INLINE_BYTES_LIMIT} bytes`);
+    expect(result.contentOmittedReason).toBeUndefined();
+    expect(result.content).toHaveLength(5_000_000);
   });
 
   it('omits inline content when the file exceeds maxInlineBytes', async () => {

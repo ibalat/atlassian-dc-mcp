@@ -17,13 +17,6 @@ export type AttachmentContentEncoding = 'none' | 'base64' | 'text' | 'image';
 /** Default cap for inline content so responses do not balloon. 1 MiB. */
 export const DEFAULT_MAX_INLINE_BYTES = 1_048_576;
 
-/**
- * Hard ceiling for `maxInlineBytes`. Raw bytes grow by 4/3 under base64, so this
- * keeps a single payload under the 5 MB per-image limit that the model APIs
- * enforce, and keeps a JSON-embedded blob from blowing the response budget.
- */
-export const MAX_INLINE_BYTES_LIMIT = 3_750_000;
-
 export interface AttachmentDownloadOptions {
   /**
    * Absolute, already-validated destination path to write the bytes to. Resolving
@@ -53,10 +46,15 @@ export interface AttachmentDownloadResult {
   /** Set when inline content was requested but omitted (e.g. over the size cap). */
   contentOmittedReason?: string;
   /**
-   * Set instead of `content` when the bytes were handed to the model as a separate
-   * content block, so the JSON payload does not carry a second copy of them.
+   * Set instead of `content` and `encoding` when the bytes were handed to the model
+   * as a separate content block, so this payload carries no second copy of them.
    */
   contentDeliveredAs?: 'image';
+  /**
+   * Why `returnContent: 'image'` did not render this attachment. The bytes are still
+   * in `content`, so this is not a `contentOmittedReason`.
+   */
+  imageOmittedReason?: string;
 }
 
 async function resolveToken(token: string | (() => string | undefined)): Promise<string> {
@@ -157,7 +155,7 @@ export async function downloadAttachment(params: {
 
   const returnContent = options.returnContent ?? 'none';
   if (returnContent !== 'none') {
-    const inlineCap = Math.min(options.maxInlineBytes ?? DEFAULT_MAX_INLINE_BYTES, MAX_INLINE_BYTES_LIMIT);
+    const inlineCap = options.maxInlineBytes ?? DEFAULT_MAX_INLINE_BYTES;
     if (buffer.length > inlineCap) {
       result.contentOmittedReason = `File size ${buffer.length} bytes exceeds inline cap of ${inlineCap} bytes`;
     } else {

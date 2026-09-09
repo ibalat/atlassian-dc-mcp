@@ -13,11 +13,34 @@ const MAGIC_PREFIXES: ReadonlyArray<readonly [mimeType: string, hexPrefix: strin
   ['image/gif', '47494638'],
 ];
 
-/** The model APIs reject a single image block above 5 MB of base64. */
-const MAX_IMAGE_BLOCK_CHARS = 5_000_000;
+/**
+ * Largest image we will render. Base64 grows bytes by 4/3, so this keeps one block
+ * under the 5 MB per-image payload the model APIs accept. It bounds rendering only:
+ * how many bytes may be embedded at all is the caller's `maxInlineBytes`.
+ */
+export const MAX_IMAGE_BYTES = 3_750_000;
 
 /** Past 20 images a result approaches the request-size limit and gets downscaled. */
 const MAX_IMAGE_BLOCKS = 20;
+
+/** Longest filename we will echo into a label, before an ellipsis. */
+const MAX_LABEL_FILENAME_CHARS = 120;
+
+/**
+ * Make an untrusted filename safe to interpolate into a raw text block.
+ *
+ * Everywhere else a filename reaches the model JSON-escaped inside the serialised
+ * result. A label is plain text, so a name carrying a newline could forge a second
+ * label and an instruction after it - the exact channel that making rendering
+ * opt-in was meant to keep narrow. Strip control and format characters (bidi
+ * overrides and zero-width joiners included), collapse whitespace, and cap length.
+ */
+function labelFilename(filename: string): string {
+  const flattened = filename.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, ' ').replace(/\s+/g, ' ').trim();
+  return flattened.length > MAX_LABEL_FILENAME_CHARS
+    ? `${flattened.slice(0, MAX_LABEL_FILENAME_CHARS)}…`
+    : flattened;
+}
 
 /**
  * Identify the image format from the bytes themselves.
@@ -42,31 +65,41 @@ function sniffImageMediaType(base64: string): string | undefined {
   return hex.startsWith('52494646') && hex.slice(16, 24) === '57454250' ? 'image/webp' : undefined;
 }
 
-/** Whether an attachment the caller asked to see can be rendered, and as what. */
+/**
+ * Whether an attachment the caller asked to see can be rendered, and as what.
+ *
+ * What the file *is* is decided before the budget checks, so a non-image past the
+ * block cap is told it is not an image rather than blaming the cap.
+ */
 function classifyImage(
   attachment: AttachmentDownloadResult,
   content: string,
   blocksLeft: number,
 ): { mimeType: string } | { reason: string } {
-  if (blocksLeft <= 0) {
-    return { reason: `Only the first ${MAX_IMAGE_BLOCKS} images are returned as image blocks; narrow the request with 'filename'` };
-  }
-  if (content.length > MAX_IMAGE_BLOCK_CHARS) {
-    return { reason: `Image payload ${content.length} bytes exceeds the ${MAX_IMAGE_BLOCK_CHARS} byte per-image limit` };
-  }
   const mimeType = sniffImageMediaType(content);
-  return mimeType
-    ? { mimeType }
-    : { reason: `Not a PNG, JPEG, GIF or WEBP image (declared ${attachment.mediaType ?? 'no media type'}); re-request with returnContent 'base64' or 'text' to get the bytes` };
+  if (!mimeType) {
+    return { reason: `Not a PNG, JPEG, GIF or WEBP image (declared ${attachment.mediaType ?? 'no media type'}); the bytes are in this entry as base64` };
+  }
+  const bytes = Buffer.byteLength(content, 'base64');
+  if (bytes > MAX_IMAGE_BYTES) {
+    return { reason: `Image is ${bytes} bytes, over the ${MAX_IMAGE_BYTES} byte render limit; the bytes are in this entry as base64` };
+  }
+  if (blocksLeft <= 0) {
+    return { reason: `Only the first ${MAX_IMAGE_BLOCKS} images are rendered; narrow the request with 'filename'. The bytes are in this entry as base64` };
+  }
+  return { mimeType };
 }
 
 /**
  * Turn one attachment into its JSON entry plus the blocks that carry its bytes.
  *
- * The bytes go in exactly one place. An image is delivered as an `image` block and
- * its `content` is dropped from the JSON entry, because `formatToolResponse`
- * serialises the whole result and a second base64 copy costs ~60x the tokens of the
- * block itself, which pushes a 300 KB PNG past the host's result-size limit.
+ * The bytes go in exactly one place, but only when there are two places to choose
+ * between: an image actually delivered as a block loses `content` from its JSON
+ * entry, because `formatToolResponse` serialises the whole result and a second
+ * base64 copy costs ~60x the tokens of the block itself, which pushes a 300 KB PNG
+ * past the host's result-size limit. An attachment that was *not* rendered keeps
+ * its bytes - there is no duplicate to avoid, and the caller already paid to
+ * download them - so it reads exactly as `returnContent: 'base64'` would.
  */
 function renderAttachment(
   attachment: AttachmentDownloadResult,
@@ -79,18 +112,19 @@ function renderAttachment(
   }
 
   const classified = classifyImage(attachment, content, blocksLeft);
-  const { content: _dropped, ...entry } = attachment;
   if ('reason' in classified) {
-    return { entry: { ...entry, contentOmittedReason: classified.reason }, blocks: [] };
+    return { entry: { ...attachment, imageOmittedReason: classified.reason }, blocks: [] };
   }
 
+  // `encoding` goes with the bytes it describes; contentDeliveredAs tells the story now.
+  const { content: _delivered, encoding: _describesContent, ...entry } = attachment;
   const { mimeType } = classified;
   return {
     entry: { ...entry, mediaType: mimeType, contentDeliveredAs: 'image' },
     blocks: [
       // Without a label the model cannot map image N back to attachments[i] once an
       // entry is skipped or two attachments share a filename.
-      { type: 'text', text: `attachments[${index}] ${attachment.filename} (${mimeType}, ${attachment.size} bytes)` },
+      { type: 'text', text: `attachments[${index}] ${labelFilename(attachment.filename)} (${mimeType}, ${attachment.size} bytes)` },
       { type: 'image', data: content, mimeType },
     ],
   };

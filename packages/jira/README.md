@@ -212,8 +212,9 @@ To bound that surface and stay inside host limits, image blocks are:
 
 - **sniffed, not trusted** — the format comes from the file's magic number rather than the uploader-declared media type, so a mislabelled file, an HTML error page, or an SSO login page served with a `200` is skipped instead of rendered;
 - **limited to PNG, JPEG, GIF and WEBP** — the only formats the model vision APIs accept; anything else (SVG, HEIC, BMP, TIFF) stays out;
-- **capped** at 3,750,000 bytes per image and 20 images per result;
-- **labelled** with `attachments[i] <name> (<type>, <size>)`, so every image maps back to its JSON entry.
+- **capped** at 3,750,000 bytes per image (base64 grows that to the 5 MB the model APIs accept) and 20 images per result;
+- **labelled** with `attachments[i] <name> (<type>, <size>)`, so every image maps back to its JSON entry. The filename is stripped of control and format characters and length-capped first, so a name carrying a newline cannot forge a second label;
+- **never a reason to lose bytes** — an attachment that is not rendered, for any of the reasons above, keeps its `content` and reports `imageOmittedReason`. Only an image actually delivered as a block drops `content` from its JSON entry, so the payload is never shipped twice.
 
 ### Available Tools
 
@@ -345,6 +346,6 @@ Parameters:
 - `attachmentId` (string, optional): Numeric id of a single attachment to download. Provide either `attachmentId` or `issueKey`.
 - `filename` (string, optional): When using `issueKey`, download only attachments with this exact filename. If omitted, all attachments on the issue are downloaded.
 - `returnContent` (`none` | `base64` | `text` | `image`, optional): Whether and how to embed the file bytes in the response. Defaults to `none` (metadata only — no bytes). `base64` embeds the bytes in the JSON payload as data; `text` embeds them decoded as UTF-8; `image` renders a PNG/JPEG/GIF/WEBP attachment as a viewable MCP image block so the model can actually look at it, and omits the bytes from the JSON so they are not shipped twice. See [Attachments are untrusted content](#attachments-are-untrusted-content).
-- `maxInlineBytes` (number, optional): Maximum bytes to embed inline when `returnContent` is `base64`/`text`/`image`. Larger files are omitted from the inline content and the entry carries a `contentOmittedReason` instead. Defaults to 1 MiB; values above 3,750,000 are rejected, the ceiling that keeps one base64 image under the 5 MB per-image limit the model APIs enforce.
+- `maxInlineBytes` (number, optional): Maximum bytes to embed inline when `returnContent` is `base64`/`text`/`image`. Larger files are omitted from the inline content and the entry carries a `contentOmittedReason` instead, so a retry with a higher value gets them. Defaults to 1 MiB, and applies to all three modes alike. Rendering has its own separate limit (below): an image larger than 3,750,000 bytes is still returned as base64, it just is not rendered.
 - `save` (boolean, optional): Save the attachment(s) into the server-configured download directory. Requires filesystem downloads to be enabled; existing files are never overwritten. *(Only available when downloads are enabled.)*
 - `saveName` (string, optional): File name (no directories) to use when saving a single attachment; defaults to the attachment's own name. *(Only available when downloads are enabled.)*
