@@ -6,17 +6,10 @@ export * from './attachment-download.js'
 export * from './attachment-gateway.js'
 export * from './attachment-tool-response.js'
 export * from './config/index.js';
+export * from './tool-response.js'
 export { runSetup, runSetupCli } from './setup-cli.js';
 export { describeValidationError } from './setup/describe-error.js';
 export { parseSetupArgs, printSetupHelp, SetupArgsError, type ParsedSetupArgs } from './setup/args.js';
-
-// Helper function to format tool responses
-export const formatToolResponse = (result: unknown) => ({
-  content: [{
-    type: 'text' as const,
-    text: JSON.stringify(result)
-  }]
-});
 
 // Error handler helper
 export const handleError = (error: Error) => {

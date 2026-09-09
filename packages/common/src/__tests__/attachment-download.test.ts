@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { downloadAttachment } from '../attachment-download.js';
+import { downloadAttachment, MAX_INLINE_BYTES_LIMIT } from '../attachment-download.js';
 
 function mockFetchOnce(
   body: Buffer,
@@ -104,6 +104,35 @@ describe('downloadAttachment', () => {
 
     expect(result.content).toBe(bytes.toString('base64'));
     expect(result.encoding).toBe('base64');
+  });
+
+  it("base64-encodes the bytes for returnContent 'image'", async () => {
+    const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    mockFetchOnce(bytes, { contentType: 'image/png' });
+
+    const result = await downloadAttachment({
+      url: 'https://host/download/x',
+      token: 'tok',
+      filename: 'shot.png',
+      options: { returnContent: 'image' },
+    });
+
+    expect(result.content).toBe(bytes.toString('base64'));
+    expect(result.encoding).toBe('base64');
+  });
+
+  it('clamps maxInlineBytes to the hard ceiling', async () => {
+    mockFetchOnce(Buffer.alloc(MAX_INLINE_BYTES_LIMIT + 1));
+
+    const result = await downloadAttachment({
+      url: 'https://host/download/x',
+      token: 'tok',
+      filename: 'huge.png',
+      options: { returnContent: 'image', maxInlineBytes: 25_000_000 },
+    });
+
+    expect(result.content).toBeUndefined();
+    expect(result.contentOmittedReason).toContain(`inline cap of ${MAX_INLINE_BYTES_LIMIT} bytes`);
   });
 
   it('omits inline content when the file exceeds maxInlineBytes', async () => {

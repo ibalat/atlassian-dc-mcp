@@ -5,13 +5,24 @@ import { basename } from 'node:path';
  * How the downloaded bytes should be returned to the caller inline, in addition
  * to (or instead of) being written to disk.
  * - `none`: do not embed the bytes in the response (default)
- * - `base64`: embed base64-encoded bytes (suitable for binary files)
+ * - `base64`: embed base64-encoded bytes in the JSON payload (suitable for binary
+ *   files); the bytes stay data and are never rendered for the model to look at
  * - `text`: embed the bytes decoded as UTF-8 text (suitable for text files)
+ * - `image`: deliver the bytes as a viewable MCP image block instead of in the
+ *   JSON payload. Only for images the model is meant to *look at*; the pixels
+ *   become model-visible, so see the prompt-injection note in the READMEs.
  */
-export type AttachmentContentEncoding = 'none' | 'base64' | 'text';
+export type AttachmentContentEncoding = 'none' | 'base64' | 'text' | 'image';
 
 /** Default cap for inline content so responses do not balloon. 1 MiB. */
 export const DEFAULT_MAX_INLINE_BYTES = 1_048_576;
+
+/**
+ * Hard ceiling for `maxInlineBytes`. Raw bytes grow by 4/3 under base64, so this
+ * keeps a single payload under the 5 MB per-image limit that the model APIs
+ * enforce, and keeps a JSON-embedded blob from blowing the response budget.
+ */
+export const MAX_INLINE_BYTES_LIMIT = 3_750_000;
 
 export interface AttachmentDownloadOptions {
   /**
@@ -36,11 +47,16 @@ export interface AttachmentDownloadResult {
   size: number;
   /** Absolute path the file was written to, when saving was requested. */
   savedPath?: string;
-  /** Inline content, when returnContent is `base64` or `text`. */
+  /** Inline content, when returnContent is `base64`, `text` or `image`. */
   content?: string;
   encoding?: 'base64' | 'text';
   /** Set when inline content was requested but omitted (e.g. over the size cap). */
   contentOmittedReason?: string;
+  /**
+   * Set instead of `content` when the bytes were handed to the model as a separate
+   * content block, so the JSON payload does not carry a second copy of them.
+   */
+  contentDeliveredAs?: 'image';
 }
 
 async function resolveToken(token: string | (() => string | undefined)): Promise<string> {
@@ -141,12 +157,12 @@ export async function downloadAttachment(params: {
 
   const returnContent = options.returnContent ?? 'none';
   if (returnContent !== 'none') {
-    const inlineCap = options.maxInlineBytes ?? DEFAULT_MAX_INLINE_BYTES;
+    const inlineCap = Math.min(options.maxInlineBytes ?? DEFAULT_MAX_INLINE_BYTES, MAX_INLINE_BYTES_LIMIT);
     if (buffer.length > inlineCap) {
       result.contentOmittedReason = `File size ${buffer.length} bytes exceeds inline cap of ${inlineCap} bytes`;
     } else {
-      result.content = returnContent === 'base64' ? buffer.toString('base64') : buffer.toString('utf-8');
-      result.encoding = returnContent;
+      result.content = returnContent === 'text' ? buffer.toString('utf-8') : buffer.toString('base64');
+      result.encoding = returnContent === 'text' ? 'text' : 'base64';
     }
   }
 
